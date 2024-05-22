@@ -34,18 +34,22 @@ def on_message(ws, message):
     price = float(order['ap'])
     value = quantity * price
 
-    if side == "BUY":
-        emoji = "🟢"
-        side_text = "Short"
+    # Check if the liquidated amount is greater than $50,000
+    if value > 50000:
+        if side == "BUY":
+            emoji = "🟢"
+            side_text = "Short"
+        else:
+            emoji = "🔴"
+            side_text = "Long"
+
+        formatted_message = f"{emoji} #{symbol} Liquidated {side_text}: ${value/1000:.1f}K at ${price}"
+        print(f"Formatted message: {formatted_message}")
+
+        # Send the message to the Telegram channel
+        send_telegram_message(formatted_message)
     else:
-        emoji = "🔴"
-        side_text = "Long"
-
-    formatted_message = f"{emoji} #{symbol} Liquidated {side_text}: ${value:,.1f} at ${price:,.2f}"
-    print(formatted_message)
-
-    # Send the message to the Telegram channel
-    send_telegram_message(formatted_message)
+        print(f"Ignored message with value: ${value:,.1f}")
 
 def on_error(ws, error):
     print(f"WebSocket error: {error}")
