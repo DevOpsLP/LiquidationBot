@@ -1,6 +1,7 @@
 import websocket
 import json
 import requests
+import time
 
 # Telegram Bot details
 TELEGRAM_BOT_TOKEN = '6606304009:AAH06LpGvbU73HHZfhOnwh0qJ8Wfj__1lFA'
@@ -25,6 +26,12 @@ def send_telegram_message(message):
     except requests.exceptions.RequestException as e:
         print(f"Failed to send message: {e}")
 
+def format_value(value):
+    if value > 100000:
+        return f"{value/1000:,.0f}K"  # No decimal places
+    else:
+        return f"{value/1000:,.1f}K"  # One decimal place
+
 def on_message(ws, message):
     data = json.loads(message)
     order = data['o']
@@ -43,7 +50,8 @@ def on_message(ws, message):
             emoji = "🔴"
             side_text = "Long"
 
-        formatted_message = f"{emoji} #{symbol} Liquidated {side_text}: ${value/1000:.1f}K at ${price}"
+        formatted_value = format_value(value)
+        formatted_message = f"{emoji} #{symbol} Liquidated {side_text}: ${formatted_value} at ${price:,.2f}"
         print(f"Formatted message: {formatted_message}")
 
         # Send the message to the Telegram channel
@@ -53,13 +61,28 @@ def on_message(ws, message):
 
 def on_error(ws, error):
     print(f"WebSocket error: {error}")
+    attempt_reconnect(ws)
 
 def on_close(ws, close_status_code, close_msg):
     print("### WebSocket closed ###")
     print(f"Close status code: {close_status_code}, close message: {close_msg}")
+    attempt_reconnect(ws)
 
 def on_open(ws):
     print("### WebSocket opened ###")
+
+def attempt_reconnect(ws):
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempting to reconnect... (Attempt {attempt + 1}/{max_retries})")
+            ws.run_forever()
+            break
+        except Exception as e:
+            print(f"Reconnection attempt {attempt + 1} failed: {e}")
+            time.sleep(2 ** attempt)  # Exponential backoff
+    else:
+        print("Max reconnection attempts reached. Exiting.")
 
 if __name__ == "__main__":
     websocket.enableTrace(True)
@@ -68,4 +91,4 @@ if __name__ == "__main__":
                                 on_error=on_error,
                                 on_close=on_close)
     ws.on_open = on_open
-    ws.run_forever()
+    attempt_reconnect(ws)
