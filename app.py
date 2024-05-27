@@ -87,9 +87,6 @@ def on_open(ws):
     print("### WebSocket opened ###")
     reconnecting = False  # Reset the reconnecting flag
 
-    # Simulate disconnection after 1 minute
-    threading.Timer(60, lambda: ws.close()).start()
-
 def attempt_reconnect(url):
     global reconnecting
     if reconnecting:
